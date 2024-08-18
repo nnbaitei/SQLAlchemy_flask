@@ -132,6 +132,21 @@ def tags_view(tag_name):
         notes=notes,
     )
 
+@app.route('/tags/delete/<tag_name>', methods=['POST'])
+def tags_delete(tag_name):
+    db = models.db
+    tag = models.Tag.query.filter_by(name=tag_name).first_or_404()
+    db.session.delete(tag)
+    
+    db.session.execute(
+        db.delete(models.note_tag_m2m).where(
+            models.note_tag_m2m.c.tag_id == tag.id
+        )
+    )
+    db.session.commit()
+    return redirect(url_for('index'))
+
+
 @app.route('/')
 def notes_list():
     notes = models.Note.query.all()
