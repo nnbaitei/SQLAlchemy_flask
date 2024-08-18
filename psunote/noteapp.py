@@ -1,5 +1,5 @@
 import flask
-from flask import render_template, redirect, url_for, abort
+from flask import render_template, redirect, url_for, abort, request
 
 import models
 import forms
@@ -103,6 +103,17 @@ def notes_edit(note_id):
 
     return render_template("notes-edit.html", form=form, note=note)
 
+@app.route('/notes/delete/<int:note_id>', methods=['GET', 'POST'])
+def notes_delete(note_id):
+    note = models.Note.query.get_or_404(note_id)
+    db =models.db
+    if request.method == 'POST':
+        db.session.delete(note)
+        db.session.commit()
+        return redirect(url_for('notes_list'))
+    return render_template('notes_delete.html', note=note)
+
+
 @app.route("/tags/<tag_name>")
 def tags_view(tag_name):
     db = models.db
@@ -120,6 +131,11 @@ def tags_view(tag_name):
         tag_name=tag_name,
         notes=notes,
     )
+
+@app.route('/')
+def notes_list():
+    notes = models.Note.query.all()
+    return render_template('notes_list.html', notes=notes)
 
 
 if __name__ == "__main__":
