@@ -69,6 +69,10 @@ def notes_edit(note_id):
 
     form = edit_forms.NoteForm(obj=note)
 
+    # Pre-populate form tags with existing tag names
+    if note.tags:
+        form.tags.data = [tag.name for tag in note.tags]
+    
     if form.validate_on_submit():
         # Manually update the note object with form data
         note.title = form.title.data
