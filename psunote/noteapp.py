@@ -25,7 +25,7 @@ def index():
         notes=notes,
     )
 
-
+# create note
 @app.route("/notes/create", methods=["GET", "POST"])
 def notes_create():
     form = forms.NoteForm()
@@ -57,6 +57,7 @@ def notes_create():
     db.session.commit()
     return flask.redirect(flask.url_for("index"))
 
+# edit note
 @app.route("/notes/edit/<int:note_id>", methods=["GET", "POST"])
 def notes_edit(note_id):
     db = models.db
@@ -69,44 +70,34 @@ def notes_edit(note_id):
 
     form = edit_forms.NoteForm(obj=note)
 
-    # Pre-populate form tags with existing tag names
     if note.tags:
         form.tags.data = [tag.name for tag in note.tags]
     
     if form.validate_on_submit():
-        # Manually update the note object with form data
         note.title = form.title.data
         note.description = form.description.data
-        
-        # Handle tag updates
         tag_names = form.tags.data
+
         if tag_names:
-            # Query tags based on the names provided
             existing_tags = db.session.execute(
                 db.select(models.Tag).filter(models.Tag.name.in_(tag_names))
             ).scalars().all()
-            
-            # Determine which tags need to be created
             existing_tag_names = {tag.name for tag in existing_tags}
             new_tag_names = set(tag_names) - existing_tag_names
-            
-            # Create new tags
             new_tags = [models.Tag(name=name) for name in new_tag_names]
             db.session.add_all(new_tags)
             db.session.commit()
-            
-            # Update the note's tags
             all_tags = existing_tags + new_tags
             note.tags = all_tags
         else:
             note.tags = []
 
-        # Commit the changes to the database
         db.session.commit()
         return redirect(url_for("index"))
 
     return render_template("notes-edit.html", form=form, note=note)
 
+# delete note
 @app.route('/notes/delete/<int:note_id>', methods=['GET', 'POST'])
 def notes_delete(note_id):
     note = models.Note.query.get_or_404(note_id)
@@ -117,58 +108,47 @@ def notes_delete(note_id):
         return redirect(url_for('notes_list'))
     return render_template('notes_delete.html', note=note)
 
-
-
+# tag view
 @app.route("/tags/<tag_name>")
 def tags_view(tag_name):
-    db = models.db
-    
-    # Fetch the tag by name
+    db = models.db    
     tag = (
         db.session.execute(db.select(models.Tag).where(models.Tag.name == tag_name))
         .scalars()
         .first()
-    )
-    
-    # Ensure the tag exists
+    )    
     if not tag:
-        return flask.abort(404)  # or handle as needed
-
-    # Fetch notes associated with the tag
+        return flask.abort(404)  
     notes = db.session.execute(
         db.select(models.Note).where(models.Note.tags.any(id=tag.id))
     ).scalars()
     
-    # Pass tag and tag_id to the template
     return flask.render_template(
         "tags-view.html",
         tag_name=tag_name,
         notes=notes,
-        tag_id=tag.id  # Pass tag_id to the template
+        tag_id=tag.id 
     )
 
-
+# delete tag
 @app.route('/tags/delete/<int:tag_id>', methods=['POST'])
 def tags_delete(tag_id):
     tag = models.Tag.query.get_or_404(tag_id)
     db = models.db
 
-    # Find all notes associated with the tag
     notes = db.session.execute(
         db.select(models.Note).where(models.Note.tags.any(id=tag_id))
     ).scalars().all()
 
-    # Delete all notes associated with the tag
     for note in notes:
         db.session.delete(note)
 
-    # Delete the tag itself
     db.session.delete(tag)
     db.session.commit()
 
-    return redirect(url_for('index'))  # or to the page you want to redirect to
+    return redirect(url_for('index'))
 
-
+# edit tag
 @app.route('/tags/edit/<int:tag_id>', methods=['GET', 'POST'])
 def tags_edit(tag_id):
     db = models.db
@@ -176,7 +156,6 @@ def tags_edit(tag_id):
     if request.method == 'POST':
         new_name = request.form['name']
         
-        # Check if new name is valid
         if new_name:
             tag.name = new_name
             db.session.commit()
@@ -184,13 +163,11 @@ def tags_edit(tag_id):
     
     return render_template('tags_edit.html', tag=tag)
 
-
-
+# route all page
 @app.route('/')
 def notes_list():
     notes = models.Note.query.all()
     return render_template('notes_list.html', notes=notes)
-
 
 if __name__ == "__main__":
     app.run(debug=True)

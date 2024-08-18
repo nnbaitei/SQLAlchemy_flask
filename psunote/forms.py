@@ -34,6 +34,5 @@ BaseNoteForm = model_form(
     models.Note, base_class=FlaskForm, exclude=["created_date", "updated_date"], db_session=models.db.session
 )
 
-
 class NoteForm(BaseNoteForm):
     tags = TagListField("Tags", validators=[DataRequired()])
