@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Edit Tag{% endblock %}
+{% block body %}
+<h1>Edit Tag</h1>
+<form method="POST">
+    <div class="form-group">
+        <label for="name">Tag Name</label>
+        <input type="text" id="name" name="name" class="form-control" value="{{ tag.name }}" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
+<a class="btn btn-secondary mt-2" href="{{ url_for('tags_view', tag_name=tag.name) }}">Cancel</a>
+{% endblock %}

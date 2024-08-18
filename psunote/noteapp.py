@@ -114,37 +114,72 @@ def notes_delete(note_id):
     return render_template('notes_delete.html', note=note)
 
 
+
 @app.route("/tags/<tag_name>")
 def tags_view(tag_name):
     db = models.db
+    
+    # Fetch the tag by name
     tag = (
         db.session.execute(db.select(models.Tag).where(models.Tag.name == tag_name))
         .scalars()
         .first()
     )
+    
+    # Ensure the tag exists
+    if not tag:
+        return flask.abort(404)  # or handle as needed
+
+    # Fetch notes associated with the tag
     notes = db.session.execute(
         db.select(models.Note).where(models.Note.tags.any(id=tag.id))
     ).scalars()
-
+    
+    # Pass tag and tag_id to the template
     return flask.render_template(
         "tags-view.html",
         tag_name=tag_name,
         notes=notes,
+        tag_id=tag.id  # Pass tag_id to the template
     )
 
-@app.route('/tags/delete/<tag_name>', methods=['POST'])
-def tags_delete(tag_name):
+
+@app.route('/tags/delete/<int:tag_id>', methods=['POST'])
+def tags_delete(tag_id):
+    tag = models.Tag.query.get_or_404(tag_id)
     db = models.db
-    tag = models.Tag.query.filter_by(name=tag_name).first_or_404()
+
+    # Find all notes associated with the tag
+    notes = db.session.execute(
+        db.select(models.Note).where(models.Note.tags.any(id=tag_id))
+    ).scalars().all()
+
+    # Delete all notes associated with the tag
+    for note in notes:
+        db.session.delete(note)
+
+    # Delete the tag itself
     db.session.delete(tag)
-    
-    db.session.execute(
-        db.delete(models.note_tag_m2m).where(
-            models.note_tag_m2m.c.tag_id == tag.id
-        )
-    )
     db.session.commit()
-    return redirect(url_for('index'))
+
+    return redirect(url_for('index'))  # or to the page you want to redirect to
+
+
+@app.route('/tags/edit/<int:tag_id>', methods=['GET', 'POST'])
+def tags_edit(tag_id):
+    db = models.db
+    tag = models.Tag.query.get_or_404(tag_id)
+    if request.method == 'POST':
+        new_name = request.form['name']
+        
+        # Check if new name is valid
+        if new_name:
+            tag.name = new_name
+            db.session.commit()
+            return redirect(url_for('tags_view', tag_name=new_name))
+    
+    return render_template('tags_edit.html', tag=tag)
+
 
 
 @app.route('/')
